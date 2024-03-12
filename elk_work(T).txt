@@ -1,0 +1,883 @@
+elk 실행 확인
+  http://localhost:9200
+
+kibana 실행
+  http://localhost:5601
+
+1. index 만들기
+  PUT classes
+
+2. index 만들기
+  GET classes
+
+3. index 삭제
+DELETE classes
+
+4. 문서 생성
+  [표현법] POST/인덱스명/_doc/id 
+  POST classes/_doc/1
+  {
+    "name":"gildong",
+    "msg" : "hello"
+  }
+
+  -> 확인
+  GET classes/_doc/1
+
+  -> id를 넣지않고 생성 : id를 자동생성(문자+숫자)
+  POST classes/_doc
+  {
+    "name":"newName",
+    "msg" : "newMsg"
+  }
+
+5. 문서에 필드 추가(만약 기존에 있는 필드이면 값만 업데이트)
+  [표현법] POST/인덱스명/_update/id
+          {
+            "doc:{
+              키 : 값
+            }
+          }
+
+  POST classes/_update/1
+  {
+    "doc":{
+      "msg":"안녕"
+    }
+  }
+
+  POST classes/_update/1
+  {
+    "doc":{
+      "num1": 1
+    }
+  }
+
+  -> script를 이용한 값 변경
+  POST classes/_update/1
+  {
+    "script": {
+      "source": "ctx._source.num1 += params.value",
+      "params": {
+        "value":3
+      }
+    }
+  }
+
+6. _bulk : 한꺼번에 많은 items를 넣을 때
+
+  POST _bulk
+  {"index":{"_index":"itest", "id":"1"}}
+  {"msg":"안녕 김이라고 해","name":"kim", "age":20}
+  {"index":{"_index":"itest", "id":"2"}}
+  {"msg":"나는 이가야","name":"lee", "age":20}
+  {"index":{"_index":"itest", "id":"3"}}
+  {"msg":"나는 박휘순이야","name":"park", "age":20}
+
+  -> 파일로 index를 만들때
+  POST _bulk
+
+* DELETE 주의점 전체가 삭제되지 않도록 주의
+  -> 문서에서 id 1번만 삭제
+    DELETE itest2/_doc/1
+
+  -> index 전체 삭제
+    DELETE itest2
+
+7. _search : 검색
+  * url 검색
+    GET 인덱스/_search?q=검색키:검색값
+
+    GET itest2/_search?q=name:park
+    GET itest2/_search?q=name:park AND age:20
+
+  * 본문 데이터 검색
+
+  7.1. term : 완전일치 검색
+    GET basketball/_search
+    {
+      "query": {
+        "term":{
+          "points": 30
+        }
+      }
+    }
+
+  7.2. match : 단어가 포함되어 있으면 검색
+  GET basketball/_search
+  {
+    "query" : {
+      "match":{
+        "team":"states"
+      }
+    }
+  }
+
+   ->  match에서 공백은 or를 의미
+    GET basketball/_search
+    {
+      "query" : {
+        "match":{
+          "team":"states Jazz"
+        }
+      }
+    }
+
+   ->  match에서 and로 검색 : 공백 중간이나 앞, 뒤에 다른 단어가 와도됨
+    GET basketball/_search
+    {
+      "query":{
+        "match":{
+          "team": {
+            "query":"states Jazz",
+            "operator":"and"
+          }
+        }
+      }
+    }
+
+  7.3. match_phrase : 제시한 검색어는 정확히 일치. 앞이나 뒤에 다른단어가 와도됨
+  GET basketball/_search
+  {
+    "query":{
+      "match_phrase":{
+        "team" : "States Warriors"
+      }
+    }
+  }
+
+   -> slop 옵션: 값의 공백사이의 단어가 slop의 갯수 이하의 단어가 들어와도됨
+  GET basketball/_search
+  {
+    "query":{
+      "match_phrase":{
+        "team" : {
+          "query":"States Warriors",
+          "slop":1
+        }
+      }
+    }
+  }
+
+  문제1. Washington 이 들어가져 있는 모든 문서 검색
+  문제2. Golden States 들 중 하나라도 들어있는 문서 검색
+  문제3. Golden States 공백안에 1단어가 들어와도 검색
+  문제4. Warriors States 가 모두 들어있는 문서 검색
+
+  7.4. query_string : 여러개의 검색 사용가능
+  GET basketball/_search
+  {
+    "query":{
+      "query_string":{
+        "default_field":"team",
+        "query": "(Golden AND Jazz) OR \"Golden Warriors\""
+      }
+    }
+  } 
+
+  7.5. Bool Query : 여러 쿼리를 조합하여 사용가능
+          4개의 인자 가지고 있다
+      - must : 쿼리가 참인 문서들을 검색
+      - must_not : 쿼리가 거짓인 문서들을 검색
+      - should : 검색 결과 중 이쿼리에 해당하는 문서들의 score를 높여줌
+      - filter : 쿼리가 참인 문서를 검색하지만 score를 계산하지 않음
+                must보다 검색 속도가 빠르다
+
+    [사용법]
+    GET 인덱스명/_search
+    {
+      "query":{
+        "bool":{
+          "must":[
+            { 쿼리 }, ...
+          ],
+          "must_not":[
+            { 쿼리 }, ...
+          ],
+          "should":[
+            { 쿼리 }, ...
+          ],
+          "filter":[
+            { 쿼리 }, ...
+          ]
+        }
+      }
+    }
+
+    GET basketball/_search
+    {
+      "query":{
+        "bool":{
+          "must": [
+            {"match": {"team":"Jazz"}},     // and조건
+            {"match_phrase":{"team":"Golden States"}}
+          ]
+        }
+      }
+    } 
+
+    -> Golden States 사이의 1개의 단어가 들어오는것은 허용
+    GET basketball/_search
+    {
+      "query":{
+        "bool":{
+          "must": [
+            {"match": {"team":"Jazz"}}, 
+            {"match_phrase":{
+              "team": {
+                "query" : "Golden States",
+                "slop":1
+                }
+              }
+            }
+          ]
+        }
+      }
+    } 
+
+    -> Jazz 있고, Golden States 없는
+    GET basketball/_search
+    {
+      "query":{
+        "bool":{
+          "must":[{
+            "match":{
+              "team":"Jazz"
+            }
+          }],
+          "must_not":[{
+            "match_phrase":{
+              "team":"Golden States"
+            }
+          }]
+        }
+      }
+    }
+
+  -> should : 검색 점수 조정을 위해 사용(가중치를 넣어줌)
+  GET basketball/_search
+  {
+    "query":{
+      "match":{
+        "team":"Jazz"
+      }
+    }
+  }
+
+  -> 'Golden'에 가중치를 주어 score 올리기
+  GET basketball/_search
+  {
+    "query":{
+      "bool":{
+        "must":[{
+          "match":{"team":"Jazz"}
+        }],
+        "should":[{
+          "match":{"team":"Golden"}
+        }]
+      }
+    }
+  }
+
+  11: 1.3365866
+  7 : 1.1689311  (8,9)
+
+  -> filter : score에 영향을 주지 않고 검색값
+
+  -> Jazz로만 검색한 것과 score가 다름
+  GET basketball/_search
+  {
+    "query":{
+      "bool":{
+        "must":[{
+          "match":{"team":"Jazz"}
+        },
+        {
+          "match":{"team":"Golden"}
+        }
+        ]
+      }
+    }
+  }
+
+  -> Jazz로만 검색한 것과 같은 score를 가짐
+  GET basketball/_search
+  {
+    "query":{
+      "bool":{
+        "must":[{
+          "match":{"team":"Jazz"}
+        }],
+        "filter":[{
+          "match":{"team":"Golden"}
+        }]
+      }
+    }
+  }
+
+  -> Range query : 숫자나 날짜 형식을 범위를 검색
+    - gte : ~이상
+    - gt : ~초과
+    - lte : ~이하
+    - lt : ~미만
+
+  -> points가 10~19사이 검색
+  GET basketball/_search
+  {
+    "query":{
+      "range":{
+        "points":{
+          "gte":10,
+          "lt":20
+        }
+      }
+    }
+  }
+
+  -> submit_date에서 2023년도 검색값
+  GET basketball/_search
+  {
+    "query":{
+      "range":{
+        "submit_date":{
+          "gte" : "2023-01-01",
+          "lte" : "2023-12-31"
+        }
+      }
+    }
+  }
+
+8. 데이터 색인 : 역인덱스(단어 -> 매핑문서)
+
+-> tokenizer filter : 항목의 값으로 입력
+
+  GET _analyze
+  {
+    "text":"Today is a day where I feel lucky and happy",
+    "tokenizer":"whitespace",
+    "filter":[
+      "lowercase",    // 소문자로 변환
+      "stop",         // 불용어 제외
+      "snowball"      // 단어의 원형
+    ]
+  }
+
+  -> filter에 넣은 순서대로 적용됨
+  GET _analyze
+  {
+    "text":"Today Is A day where I feel lucky and happy",
+    "tokenizer":"whitespace",
+    "filter":[
+      "stop",     
+      "lowercase",   
+      "snowball"   
+    ]
+  }
+
+  -> index의 구조 만들기
+  PUT t_index
+  {
+    "mappings":{
+      "properties":{
+        "msg":{
+          "type":"text",
+          "analyzer":"snowball"
+        }
+      }
+    }
+  }
+
+  PUT t_index/_doc/1
+  {
+    "msg":"Today is a day where I feel lucky and happy"
+  }
+
+   GET t_index/_search
+
+  -> happy 검색됨
+  GET t_index/_search
+  {
+  "query":{
+    "match":{
+      "msg":"happy"
+    }
+  }
+  }
+
+  // 원형으로 들어가기 때문에 happi로 저장됨 term으로 검색하면 happy는 검색 안됨
+  -> happy 안됨
+  GET t_index/_search
+  {
+    "query":{
+      "term":{
+        "msg":"happy"
+      }
+    }
+  }
+
+  -> happy 검색됨
+  GET t_index/_search
+  {
+    "query":{
+      "term":{
+        "msg":"happi"
+      }
+    }
+  }
+
+  -> 사용자 정의 토큰 필터 만들기
+  PUT t_index2
+  {
+    "settings":{
+      "index":{
+        "analysis":{
+          "analyzer":{
+            "my_custom_analyzer":{
+              "type":"custom",
+              "tokenizer":"whitespace",
+              "filter":[
+                "lowercase",
+                "my_stop_filter",
+                "stop",
+                "snowball"
+              ]
+            }
+          },
+          "filter":{
+            "my_stop_filter":{
+              "type":"stop",
+              "stopwords":[
+                "feel"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+
+  GET t_index2/_analyze
+  {
+    "analyzer":"my_custom_analyzer",
+    "text":["Today is a day where I feel lucky and happy"]
+  }
+
+  PUT t_index2/_doc/1
+  {
+    "msg":"Today is a day where I feel lucky and happy"
+  }
+
+  -> _termvectors : trem의 분석에 대한 자세한 정보보기
+  GET t_index2/_termvectors/1?fields=msg
+
+  * 한글 형태소 분석기 nori
+  설치 : elasticsearch-plugin install analysis-nori
+
+  -> 기본 토큰
+  GET _analyze
+  {
+    "analyzer":"standard",
+    "text":["동해물과 백두산이"]
+  }
+
+  -> nori 토큰
+  GET _analyze
+  {
+    "analyzer":"nori",
+    "text":["동해물과 백두산이"]
+  }
+
+  -> 사용자 사용 등록
+  PUT my_nori
+  {
+    "settings":{
+      "analysis":{
+        "tokenizer":{
+          "my_nori_token":{
+            "type":"nori_tokenizer",
+            "user_dictionary_rules":[
+              "해물"
+            ]
+          }
+        }
+      }
+    }
+  }
+
+  -> 사용자 등록 토큰
+  GET my_nori/_analyze
+  {
+    "tokenizer":"my_nori_token",
+    "text":["동해물과 백두산이"]
+  }
+
+  -> discompound_mode : 합성어(복합어) 처리 3가지 옵션
+  - none : 복합어를 분리하지 않음
+  - discard : 복합어 분리
+  - mixed : none과 discard 모두 저장
+
+  PUT my_nori2
+  {
+    "settings": {
+      "analysis": {
+        "tokenizer": {
+          "nori_none": {
+            "type": "nori_tokenizer",
+            "decompound_mode": "none"
+          },
+          "nori_discard": {
+            "type": "nori_tokenizer",
+            "decompound_mode": "discard"
+          },
+          "nori_mixed": {
+            "type": "nori_tokenizer",
+            "decompound_mode": "mixed"
+          }
+        }
+      }
+    }
+  }
+
+  GET my_nori2/_analyze
+  {
+    "tokenizer":"nori_none",
+    "text":["동해물과 백두산이"]
+  }
+*/
+
+  - stoptags : 한글 품사 중 제외시킬 품사
+
+  디폴트 값 =
+  "stoptags" : [
+    "E", "IC", "J", "MAG", "MAJ",
+    "MM", "SP", "SSC", "SSO", "SC",
+    "SE", "XPN", "XSA", "XSN", "XSV",
+    "UNA", "NA", "VSV"
+  ]
+
+  -> my_stoptag인덱스에서 수사(NR)을 제외
+  PUT my_stoptag
+  {
+    "settings":{
+      "index":{
+        "analysis":{
+          "filter":{
+            "my_stop_tag":{
+              "type":"nori_part_of_speech",
+              "stoptags":["NR"]
+            }
+          }
+        }
+      }
+    }
+  }
+
+  GET my_stoptag/_analyze
+  {
+    "tokenizer":"nori_tokenizer",
+    "filter":["my_stop_tag"],
+    "text":"일곱난장이들의 나들이"
+  }
+
+  -> nori_readingform : 한자를 한글로 바꾸어 저장
+  GET _analyze
+  {
+    "tokenizer":"nori_tokenizer",
+    "filter":["nori_readingform"],
+    "text":"立春大吉"
+  }
+
+  -> explain : 품사정보를 같이 볼 수있다
+  GET _analyze
+  {
+    "tokenizer":"nori_tokenizer",
+    "text":["동해물과 백두산이"],
+    "explain":true
+  }
+
+8. mapping(=스키마) : 자동으로 생성됨. 너무 많은 정보를 담고있다
+
+PUT books/_doc/1
+{
+  "title": "Romeo and Juliet",
+  "author": "William Shakespeare",
+  "category":"Tragedies",
+  "publish_date" : "1597-03-12T00:00:00",
+  "page" : 200
+}
+
+-> 전체 구조 확인
+ GET books
+ 
+-> 전체 구조 중 mappings의 값만 보기
+ GET books/_mapping
+
+-mapping의 정의
+ : 기존의 mapping에 추가는 가능하지만 바꾸지는 못한다
+ [표현법]
+ PUT 인덱스명/_mapping
+ {
+  "properties":{
+    "추가할 필드명":{
+      "type" : "필드 타입"
+    }
+  }
+ }
+
+ -> 기존의 books에 삽입
+ PUT books/_mapping
+ {
+  "properties":{
+    "content":{
+      "type":"text"
+    }
+  }
+ }
+
+  GET books/_mapping
+
+  -> 소문자도 검색됨
+  GET books/_search
+  {
+    "query":{
+      "match":{
+        "title":"romeo"
+      }
+    }
+  }
+
+-> title.keyword로 검색하면 대소문자 가림 : 안나옴
+GET books/_search
+{
+  "query": {
+    "match": {
+      "title.keyword": "romeo"
+    }
+  }
+}
+
+GET books/_search
+{
+  "query": {
+    "match": {
+      "title.keyword": "Romeo and Juliet"
+    }
+  }
+}
+
+  DELETE  books
+
+  PUT books
+  {
+    "mappings": {
+      "properties": {
+        "author": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "category": {
+          "type": "keyword",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "page": {
+          "type": "integer"
+        },
+        "publish_date": {
+          "type": "date"
+        },
+        "title": {
+          "type": "text"
+        }
+      }
+    }
+  }
+
+  ->Multi filed : "fields"항목에 다시 새로운 필드를 정의하고 설정
+  DELETE  books
+
+  PUT books
+  {
+    "mappings": {
+      "properties": {
+        "author": {
+          "type": "text",
+          "fields": {
+            "fullname": {
+              "type": "keyword",
+              "ignore_above": 256
+            },
+            "nori":{
+              "type":"text"
+              "analyzer":"nori"
+            }
+          }
+        },
+        "category": {
+          "type": "keyword",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "page": {
+          "type": "integer"
+        },
+        "publish_date": {
+          "type": "date"
+        },
+        "title": {
+          "type": "text",
+          "fields": {
+            "fullname": {
+              "type": "keyword",
+              "ignore_above": 256
+            },
+            "nori":{
+              "type":"text"
+              "analyzer":"nori"
+            }
+          }
+        }
+      }
+    }
+  }
+
+  -> 숫자타입 : java의 타입과 동일 추가로
+    - half_float: 2byte
+    - scaled_flat : long형태로 저장. 옵션으로 소수점위치를 지정.
+
+    mapping에 integer로 해놓고, 실수형을 넣으면 보여줄때는 실수형을 보여주지만
+    실제 저장은 long형으로 저장되어 있음.
+
+    PUT num_index
+    {
+      "mappings":{
+        "properties":{
+          "value":{
+            "type":"integer"
+          }
+        }
+      }
+    }
+
+    PUT num_index/_doc/1
+    {
+      "value":1
+    }
+
+    PUT num_index/_doc/2
+    {
+      "value":"2"
+    }
+
+    PUT num_index/_doc/3
+    {
+      "value":3.4
+    }
+
+    GET num_index/_search
+    {
+      "query":{
+        "range":{
+          "value":{
+            "gte":1,
+            "lt":3
+          }
+        }
+      }
+    }
+
+    GET num_index/_search
+    {
+      "query":{
+        "range":{
+          "value":{
+            "gt":3,
+            "lt":5    // 결과 안나옴 3으로 저장되어 있기 때문
+          }
+        }
+      }
+    }
+
+  -> coerce옵션 : 지정한 타입외에 받을지 안받을지 선택(기본값:true)
+  PUT num_index2
+  {
+    "mappings":{
+      "properties":{
+        "value":{
+          "type":"integer",
+          "coerce":false
+        }
+      }
+    }
+  }
+
+  PUT num_index2/_doc/1
+  {
+    "value":1
+  }
+
+  PUT num_index2/_doc/2
+  {
+    "value":"2"
+  }
+
+  PUT num_index2/_doc/3
+  {
+    "value":3.4
+  }
+
+  -> date : ISO8601 형식을 따름. 이외의 다른형식은 text로 인식
+  PUT date_index/_doc/1
+  {
+    "date":"2024-03-12T16:45:30"    // type :date
+  }
+
+  PUT date_index2/_doc/1
+  {
+    "date":"12/mar/2024:16:45:30"   // type:text
+  }
+
+  GET date_index2
+
+  -> mapping 미리 정의
+  PUT date_index3
+  {
+    "mappings":{
+      "properties":{
+        "date":{
+          "type":"date",
+          "format":"dd/MMM/yyyy HH:mm:ss"
+        }
+      }
+    }
+  }
+
+  PUT date_index3/_doc/1
+  {
+    "date":"12/Mar/2024 16:45:30"
+  }
+
+  PUT date_index3
+  {
+    "mappings":{
+      "properties":{
+        "date":{
+          "type":"date",
+          "format":"dd/MMM/yyyy HH:mm:ss"||epoch_millis||yyyy-MM-dd
+        }
+      }
+    }
+  }

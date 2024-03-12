@@ -821,40 +821,40 @@ PUT books/_doc/1
     -> coerce옵션 : 지정한 타입외에 받을지 안받을지 선택(기본값:true)
     PUT num_index2
     {
-    "mappings":{
-        "properties":{
-        "value":{
-            "type":"integer",
-            "coerce":false
+        "mappings":{
+            "properties":{
+                "value":{
+                    "type":"integer",
+                    "coerce":false
+                }
+            }
         }
-        }
-    }
     }
 
     PUT num_index2/_doc/1
     {
-    "value":1
+        "value":1
     }
 
     PUT num_index2/_doc/2
     {
-    "value":"2"
+        "value":"2"
     }
 
     PUT num_index2/_doc/3
     {
-    "value":3.4
+        "value":3.4
     }
 
     -> date : ISO8601 형식을 따름. 이외의 다른형식은 text로 인식
     PUT date_index/_doc/1
     {
-    "date":"2024-03-12T16:45:30"    // type :date
+        "date":"2024-03-12T16:45:30"    // type :date
     }
 
     PUT date_index2/_doc/1
     {
-    "date":"12/mar/2024:16:45:30"   // type:text
+        "date":"12/mar/2024:16:45:30"   // type:text
     }
 
     GET date_index2
@@ -862,29 +862,29 @@ PUT books/_doc/1
     -> mapping 미리 정의
     PUT date_index3
     {
-    "mappings":{
-        "properties":{
-        "date":{
-            "type":"date",
-            "format":"dd/MMM/yyyy HH:mm:ss"
+        "mappings":{
+            "properties":{
+                "date":{
+                    "type":"date",
+                    "format":"dd/MMM/yyyy HH:mm:ss"
+                }
+            }
         }
-        }
-    }
     }
 
     PUT date_index3/_doc/1
     {
-    "date":"12/Mar/2024 16:45:30"
+        "date":"12/Mar/2024 16:45:30"
     }
 
     PUT date_index3
     {
-    "mappings":{
-        "properties":{
-        "date":{
-            "type":"date",
-            "format":"dd/MMM/yyyy HH:mm:ss"||epoch_millis||yyyy-MM-dd
+        "mappings":{
+            "properties":{
+                "date":{
+                    "type":"date",
+                    "format":"dd/MMM/yyyy HH:mm:ss"||epoch_millis||yyyy-MM-dd
+                }
+            }
         }
-        }
-    }
     }

@@ -888,3 +888,317 @@ PUT books/_doc/1
             }
         }
     }
+
+
+    -> 객체 object
+    PUT movies/_doc/1
+    {
+        "movie": {
+            "name": "Iron Man",
+            "side": "superhero"
+        }
+    }
+
+    GET movies/_mapping
+
+    GET movies/_search
+    {
+        "query": {
+            "match": {
+                "movie.name": "man"
+            }
+        }
+    }
+
+    PUT movies/_doc/2
+    {
+        "title": "The Avengers",
+        "movie": [
+            {
+                "name": "Iron Man",
+                "side": "superhero"
+            },
+            {
+                "name": "Loki",
+                "side": "villain"
+            },
+            {
+                "name": "Spider Pig",
+                "side": "superhero"
+            }
+        ]
+    }
+
+    PUT movies/_doc/3
+    {
+        "title": "Avengers : Infinity War",
+        "movie": [
+            {
+                "name": "Loki",
+                "side": "superhero"
+            },
+            {
+                "name": "Thanos",
+                "side": "villain"
+            }
+        ]
+    }
+
+    -> name은 Loki이고, side는 villain인 문서를 검색
+    GET movies/_search
+    {
+        "query": {
+            "bool": { 
+                "must": [
+                    {
+                        "match": {
+                            "movie.name": "Loki"
+                        }
+                    },
+                    {
+                        "match": {
+                            "movie.side": "villain"
+                        }
+                    }
+                ]
+            }
+        }
+    }
+
+
+    * nested : 내부에 있는 object값들을 서로 다른 역색인을 만든다
+                내가 원하는 결과 1개의 문서 검색
+    PUT movies2
+    {
+        "mappings": {
+            "properties": {
+                "movie": {
+                    "type": "nested",
+                    "properties": {
+                        "name": {
+                            "type": "text"
+                        },
+                        "side": {
+                            "type": "keyword"
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    GET movies/_search
+    {
+        "query": {
+            "nested": {
+                "path": "movie",
+                "query": {
+                    "bool": {
+                        "must": [
+                            {
+                                "match": {
+                                    "movie.name": "Loki"
+                                }
+                            },
+                            {
+                                "match": {
+                                    "movie.side": "villain"
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    }
+
+    -> geo_point 지정
+    PUT geo_index2   매핑 넣고
+    {
+        "mappings": {
+            "properties": {
+                "location": {
+                    "type": "geo_point"
+                }
+            }
+        }
+    }
+
+    PUT geo_index/_doc/1  데이터 넣고 
+    {
+        "location": {
+            "lat": 42.35548,
+            "lon": 3.46345
+        }
+    }
+
+    GET geo_index2/_mapping   조회
+
+    
+
+    PUT geo_index3  
+    {
+        "mappings": {
+            "properties": {
+                "location": {
+                    "type": "geo_point"
+                }
+            }
+        }
+    }
+
+    -> 한번에 많은 데이터 집어넣기( bulk )
+    PUT get_index3/_bulk
+    {"index":{"_id":"1"}}
+    {"station":"강남","location":{"lon":127.027926,"lat":37.497175},"line":"2호선"}
+    {"index":{"_id":"2"}}
+    {"station":"종로3가","location":{"lon":126.991806,"lat":37.571607},"line":"3호선"}
+    {"index":{"_id":"3"}}
+    {"station":"여의도","location":{"lon":126.924191,"lat":37.521624},"line":"5호선"}
+    {"index":{"_id":"4"}}
+    {"station":"서울역","location":{"lon":126.972559,"lat":37.554648},"line":"1호선"}
+
+    -> geo_bounding_box검색 : 사각형 박스안에 들어온 위치 검색
+    GET geo_index3/_search
+    {
+        "query": {
+            "geo_bounding_box": {
+                "location": {
+                    "bottom_right": {
+                        "lat": 37.5555,
+                        "lon": 127.02222
+                    },
+                    "top_left": {
+                        "lat": 37.58888,
+                        "lon": 126.9888
+                    }
+                }
+            }
+        }
+    }
+
+    -> geo_distance 검색 : 포인트와 거리를 주면 거리가 반지름으로 원형을 만들어 그 원안의 위치검색
+    GET geo_index3/_search
+    {
+        "query": {
+            "geo_distance": {
+                "distance": "5km",
+                "location": {
+                    "lat": 37.53333,
+                    "lon": 126.96666
+                }
+            }
+        }
+    }
+
+    
+    -> geo_shape : 여러개의 포인터를 연결하여 면안에 들어오는 위치 검색
+
+
+
+10. Aggregations : 집계
+    - Metrics Aggregations : 산술 min, max, sum, avg
+
+    POST ball_index/_bulk
+    { "index" : {"_id" : "1" } }
+    {"team" : "Golden States Warriors","name" : "Stephen Curry", "points" : 30,"rebounds" : 3,"assists" : 4, "blocks" : 5, "submit_date" : "2024-10-11"}
+    { "index" : {"_id" : "2" } }
+    {"team" : "Golden States Warriors","name" : "Stephen Curry","points" : 20,"rebounds" : 5,"assists" : 8, "blocks" : 5, "submit_date" : "2024-10-13"}
+
+    -> avg
+    GET ball_index/_search
+    {
+        "size": 0,
+        "aggs": {
+            "avg_score": {
+                "avg": {
+                    "field": "points"
+                }
+            }
+        }
+    }
+
+    -> max
+    GET ball_index/_search
+    {
+        "size": 0,
+        "aggs": {
+            "max_score": {
+                "max": {
+                    "field": "points"
+                }
+            }
+        }
+    }
+
+    -> min
+    GET ball_index/_search
+    {
+        "size": 0,
+        "aggs": {
+            "min_score": {
+                "min": {
+                    "field": "points"
+                }
+            }
+        }
+    }
+
+    -> sum
+    GET ball_index/_search
+    {
+        "size": 0,
+        "aggs": {
+            "sum_score": {
+                "sum": {
+                    "field": "points"
+                }
+            }
+        }
+    }
+
+    -> stats : 위의 4개 + count의 모든걸 볼 수 있다
+    GET ball_index/_search
+    {
+        "size": 0,
+        "aggs": {
+            "stats_score": {
+                "stats": {
+                    "field": "points"
+                }
+            }
+        }
+    }
+
+    -> Bucket Aggregations : 그룹
+    GET basketball2/_search
+    {
+        "size": 0,
+        "aggs":{
+            "player": {
+                "terms": {
+                    "field": "team.keyword"
+                }
+            }
+        }
+    }
+
+    -> 팀별로 합계, 평균...
+    GET basketball2/_search
+    {
+        "size": 0,
+        "aggs": {
+            "team_stats": {
+                "terms": {
+                    "field": "team.keyword"
+                },
+                "aggs": {
+                    "stats_score": {
+                        "stats": {
+                            "field": "points"
+                        }
+                    }
+                }
+            }
+        }
+    }

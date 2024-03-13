@@ -279,9 +279,6 @@ DELETE classes
     }
   }
 
-  11: 1.3365866
-  7 : 1.1689311  (8,9)
-
   -> filter : score에 영향을 주지 않고 검색값
 
   -> Jazz로만 검색한 것과 score가 다름
@@ -393,6 +390,7 @@ DELETE classes
   }
 
    GET t_index/_search
+   GET t_index/_mapping
 
   -> happy 검색됨
   GET t_index/_search
@@ -465,6 +463,15 @@ DELETE classes
   PUT t_index2/_doc/1
   {
     "msg":"Today is a day where I feel lucky and happy"
+  }
+
+  GET t_index2/_search
+  {
+    "query":{
+      "match":{
+        "msg":"feel"
+      }
+    }
   }
 
   -> _termvectors : trem의 분석에 대한 자세한 정보보기
@@ -543,7 +550,6 @@ DELETE classes
     "tokenizer":"nori_none",
     "text":["동해물과 백두산이"]
   }
-*/
 
   - stoptags : 한글 품사 중 제외시킬 품사
 
@@ -597,42 +603,42 @@ DELETE classes
 
 8. mapping(=스키마) : 자동으로 생성됨. 너무 많은 정보를 담고있다
 
-PUT books/_doc/1
-{
-  "title": "Romeo and Juliet",
-  "author": "William Shakespeare",
-  "category":"Tragedies",
-  "publish_date" : "1597-03-12T00:00:00",
-  "page" : 200
-}
+  PUT books/_doc/1
+  {
+    "title": "Romeo and Juliet",
+    "author": "William Shakespeare",
+    "category":"Tragedies",
+    "publish_date" : "1597-03-12T00:00:00",
+    "page" : 200
+  }
 
--> 전체 구조 확인
- GET books
- 
--> 전체 구조 중 mappings의 값만 보기
- GET books/_mapping
+  -> 전체 구조 확인
+  GET books
+  
+  -> 전체 구조 중 mappings의 값만 보기
+  GET books/_mapping
 
--mapping의 정의
- : 기존의 mapping에 추가는 가능하지만 바꾸지는 못한다
- [표현법]
- PUT 인덱스명/_mapping
- {
-  "properties":{
-    "추가할 필드명":{
-      "type" : "필드 타입"
+  -mapping의 정의
+  : 기존의 mapping에 추가는 가능하지만 바꾸지는 못한다
+  [표현법]
+  PUT 인덱스명/_mapping
+  {
+    "properties":{
+      "추가할 필드명":{
+        "type" : "필드 타입"
+      }
     }
   }
- }
 
- -> 기존의 books에 삽입
- PUT books/_mapping
- {
-  "properties":{
-    "content":{
-      "type":"text"
+  -> 기존의 books에 삽입
+  PUT books/_mapping
+  {
+    "properties":{
+      "content":{
+        "type":"text"
+      }
     }
   }
- }
 
   GET books/_mapping
 
@@ -646,24 +652,24 @@ PUT books/_doc/1
     }
   }
 
--> title.keyword로 검색하면 대소문자 가림 : 안나옴
-GET books/_search
-{
-  "query": {
-    "match": {
-      "title.keyword": "romeo"
+  -> title.keyword로 검색하면 대소문자 가림 : 안나옴
+  GET books/_search
+  {
+    "query": {
+      "match": {
+        "title.keyword": "romeo"
+      }
     }
   }
-}
 
-GET books/_search
-{
-  "query": {
-    "match": {
-      "title.keyword": "Romeo and Juliet"
+  GET books/_search
+  {
+    "query": {
+      "match": {
+        "title.keyword": "Romeo and Juliet"
+      }
     }
   }
-}
 
   DELETE  books
 
@@ -756,60 +762,60 @@ GET books/_search
 
   -> 숫자타입 : java의 타입과 동일 추가로
     - half_float: 2byte
-    - scaled_flat : long형태로 저장. 옵션으로 소수점위치를 지정.
+    - scaled_float : long형태로 저장. 옵션으로 소수점위치를 지정.
 
     mapping에 integer로 해놓고, 실수형을 넣으면 보여줄때는 실수형을 보여주지만
     실제 저장은 long형으로 저장되어 있음.
 
-    PUT num_index
-    {
-      "mappings":{
-        "properties":{
-          "value":{
-            "type":"integer"
-          }
+  PUT num_index
+  {
+    "mappings":{
+      "properties":{
+        "value":{
+          "type":"integer"
         }
       }
     }
+  }
 
-    PUT num_index/_doc/1
-    {
-      "value":1
-    }
+  PUT num_index/_doc/1
+  {
+    "value":1
+  }
 
-    PUT num_index/_doc/2
-    {
-      "value":"2"
-    }
+  PUT num_index/_doc/2
+  {
+    "value":"2"
+  }
 
-    PUT num_index/_doc/3
-    {
-      "value":3.4
-    }
+  PUT num_index/_doc/3
+  {
+    "value":3.4
+  }
 
-    GET num_index/_search
-    {
-      "query":{
-        "range":{
-          "value":{
-            "gte":1,
-            "lt":3
-          }
+  GET num_index/_search
+  {
+    "query":{
+      "range":{
+        "value":{
+          "gte":1,
+          "lt":3
         }
       }
     }
+  }
 
-    GET num_index/_search
-    {
-      "query":{
-        "range":{
-          "value":{
-            "gt":3,
-            "lt":5    // 결과 안나옴 3으로 저장되어 있기 때문
-          }
+  GET num_index/_search
+  {
+    "query":{
+      "range":{
+        "value":{
+          "gt":3,
+          "lt":5    // 결과 안나옴 3으로 저장되어 있기 때문
         }
       }
     }
+  }
 
   -> coerce옵션 : 지정한 타입외에 받을지 안받을지 선택(기본값:true)
   PUT num_index2
@@ -876,7 +882,364 @@ GET books/_search
       "properties":{
         "date":{
           "type":"date",
-          "format":"dd/MMM/yyyy HH:mm:ss"||epoch_millis||yyyy-MM-dd
+          "format":"dd/MMM/yyyy HH:mm:ss||epoch_millis||yyyy-MM-dd"
+        }
+      }
+    }
+  }
+  
+  -> object
+  PUT movies/_doc/1
+  {
+    "movie":{
+      "name":"Iron Man",
+      "side":"superhero"
+    }
+  }
+
+  GET movies/_mapping
+
+  GET movies/_search
+  {
+    "query":{
+      "match":{
+        "movie.name":"man"
+      }
+    }
+  }
+
+  PUT movies/_doc/2
+  {
+    "title":"The Avengers",
+    "movie":[
+      {
+        "name":"Iron Man",
+        "side":"superhero"
+      },
+      {
+        "name":"Loki",
+        "side":"villain"
+      },
+      {
+        "name":"Spider Man",
+        "side":"superhero"
+      }
+    ]
+  }
+
+  PUT movies/_doc/3
+  {
+    "title":"Avengers : Infinity War",
+    "movie":[
+      {
+        "name":"Loki",
+        "side":"superhero"
+      },
+      {
+        "name":"Thanos",
+        "side":"villain"
+      }
+    ]
+  }
+
+  -> name은 Loki이고, side는 villain인 문서를 검색
+
+  * 결과 2개의 문서 검색해 옴
+  GET movies/_search
+  {
+    "query":{
+      "bool":{
+        "must":[
+          {
+            "match":{
+              "movie.name":"Loki"
+            }
+          },
+          {
+            "match":{
+              "movie.side":"villain"
+            }
+          }
+        ]
+      }
+    }
+  }
+
+  * nested : 내부에 있는 object값들을 서로 다른 역색인을 만든다 
+    내가 원하는 결과 1개의 문서 검색
+
+  PUT movies2
+  {
+    "mappings":{
+      "properties":{
+        "movie":{
+          "type":"nested",
+          "properties":{
+            "name":{
+              "type":"text"
+            },
+            "side":{
+              "type":"keyword"
+            }
+          }
+        }
+      }
+    }
+  }
+
+  PUT movies2/_doc/2
+  {
+    "title":"The Avengers",
+    "movie":[
+      {
+        "name":"Iron Man",
+        "side":"superhero"
+      },
+      {
+        "name":"Loki",
+        "side":"villain"
+      },
+      {
+        "name":"Spider Man",
+        "side":"superhero"
+      }
+    ]
+  }
+
+  PUT movies2/_doc/3
+  {
+    "title":"Avengers : Infinity War",
+    "movie":[
+      {
+        "name":"Loki",
+        "side":"superhero"
+      },
+      {
+        "name":"Thanos",
+        "side":"villain"
+      }
+    ]
+  }
+
+  GET movies2/_search
+  {
+    "query":{
+      "nested":{
+        "path":"movie",
+        "query":{
+          "bool":{
+            "must":[
+              {
+                "match":{
+                  "movie.name":"Loki"
+                }
+              },
+              {
+                "match":{
+                  "movie.side":"villain"
+                }
+              }
+            ]
+          }
+        }
+      } 
+    }
+  }
+
+  -> Geo : 위치 정보
+  PUT geo_index/_doc/1
+  {
+    "location":{
+      "lat": 42.35548,
+      "lon": 3.46345
+    }
+  }
+
+  GET geo_index/_mapping
+
+  -> geo_point 지정
+  PUT geo_index2
+  {
+    "mappings":{
+      "properties":{
+        "location":{
+          "type":"geo_point"
+        }
+      }
+    }
+  }
+
+  PUT geo_index2/_doc/1
+  {
+    "location":{
+      "lat": 42.35548,
+      "lon": 3.46345
+    }
+  }
+
+  GET geo_index2/_mapping
+
+  PUT geo_index3
+  {
+    "mappings":{
+      "properties":{
+        "location":{
+          "type":"geo_point"
+        }
+      }
+    }
+  }
+
+  PUT geo_index3/_bulk
+  {"index":{"_id":"1"}}
+  {"station":"강남","location":{"lon":127.027926,"lat":37.497175},"line":"2호선"}
+  {"index":{"_id":"2"}}
+  {"station":"종로3가","location":{"lon":126.991806,"lat":37.571607},"line":"3호선"}
+  {"index":{"_id":"3"}}
+  {"station":"여의도","location":{"lon":126.924191,"lat":37.521624},"line":"5호선"}
+  {"index":{"_id":"4"}}
+  {"station":"서울역","location":{"lon":126.972559,"lat":37.554648},"line":"1호선"}
+
+  -> geo_bounding_box검색 : 사각형 박스안에 들어온 위치 검색
+  GET geo_index3/_search
+  {
+    "query":{
+      "geo_bounding_box":{
+        "location":{
+          "bottom_right":{
+            "lat":37.5555,
+            "lon":127.02222
+          },
+          "top_left":{
+            "let":37.58888
+            "lon":126.9888
+          }
+        }
+      }
+    }
+  }
+
+  -> geo_distance 검색 : 포인트와 거리를 주면 거리가 반지름으로 원형을 만들어 그 원안의 위치검색
+  GET geo_index3/_search
+  {
+    "query":{
+      "geo_distance":{
+        "distance":"5km",
+        "location":{
+          "lat":37.53333,
+          "lon":126.96666
+        }
+      }
+    }
+  }
+
+  "location":"24.23123, 423.2345"
+  "location":["24.23123, 423.2345"]
+
+  -> geo_shape : 여러개의 포인터를 연결하여 면안에 들어오는 위치 검색
+
+9. Aggregations : 집계
+  - Metrics Aggregations : 산술 min, max, sum, avg
+
+POST ball_index/_bulk
+{ "index" : {"_id" : "1" } }
+{"team" : "Golden States Warriors","name" : "Stephen Curry", "points" : 30,"rebounds" : 3,"assists" : 4, "blocks" : 5, "submit_date" : "2024-10-11"}
+{ "index" : {"_id" : "2" } }
+{"team" : "Golden States Warriors","name" : "Stephen Curry","points" : 20,"rebounds" : 5,"assists" : 8, "blocks" : 5, "submit_date" : "2024-10-13"}
+
+-> avg
+GET ball_index/_search
+{
+  "size":0,
+  "aggs":{
+    "avg_score":{
+      "avg":{
+        "field":"points"
+      }
+    }
+  }
+}
+
+-> max
+GET ball_index/_search
+{
+  "size":0,
+  "aggs":{
+    "max_score":{
+      "max":{
+        "field":"points"
+      }
+    }
+  }
+}
+
+-> min
+GET ball_index/_search
+{
+  "size":0,
+  "aggs":{
+    "min_score":{
+      "min":{
+        "field":"points"
+      }
+    }
+  }
+}
+
+-> sum
+GET ball_index/_search
+{
+  "size":0,
+  "aggs":{
+    "sum_score":{
+      "sum":{
+        "field":"points"
+      }
+    }
+  }
+}
+
+-> stats : 위의 4개 + count의 모든걸 볼 수 있다
+GET ball_index/_search
+{
+  "size":0,
+  "aggs":{
+    "stats_score":{
+      "stats":{
+        "field":"points"
+      }
+    }
+  }
+}
+
+  -> Bucket Aggregations : 그룹
+  GET basketball2/_search
+  {
+    "size":0,
+    "aggs":{
+      "plyer":{
+        "terms":{
+          "field":"team.keyword"
+        }
+      }
+    }
+  }
+
+  -> 팀별로 합계,평균...
+  GET basketball2/_search
+  {
+    "size":0,
+    "aggs":{
+      "team_stats":{
+        "terms":{
+          "field":"team.keyword"
+        },
+        "aggs":{
+          "stats_score":{
+            "stats":{
+              "field":"points"
+            }
+          }
         }
       }
     }
